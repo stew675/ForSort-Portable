@@ -6,8 +6,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
-#include <x86intrin.h>
-#include "timsort.h"
 
 #define DATA_SET_REVERSED	0x04
 #define DATA_SET_UNIQUE		0x08
@@ -45,29 +43,11 @@ struct item {
 
 #include "forsort.h"
 
-extern void grailSortInPlace(void *a, const size_t n, const size_t es,
-	int (*cmp)(const void *, const void *));
-
 extern void insertion_sort(void *a, const size_t n, const size_t es,
 	int (*cmp)(const void *, const void *));
 
-extern void nqsort(void *a, const size_t n, const size_t es,
-	int (*cmp)(const void *, const void *));
-
-extern void WikiSort(void *a, const size_t n,
-	int (*cmp)(struct item, struct item));
-
-extern void blitsort(void *, size_t n, size_t es,
-	int (*cmp)(const void *, const void *));
-
 enum {
-	GLIBC_QSORT = 1,
-	BENTLEY_QSORT,
-	BLIT_SORT,
-	TIM_SORT,
-	WIKI_SORT,
-	GRAIL_SORT,
-	INSERT_SORT,
+	INSERT_SORT = 1,
 	FORSORT_INPLACE,
 	FORSORT_BASIC,
 	FORSORT_STABLE,
@@ -76,22 +56,6 @@ enum {
 
 static	int	sorttype = SORT_UNKNOWN;
 static	const char	*sortname = NULL;
-
-static int __attribute__((noinline))
-wiki_compare(struct item p1, struct item p2)
-{
-	numcmps++;
-	return p1.value < p2.value;
-} // wiki_compare
-
-// Used to determine if the first uint32_t pointed at, is greater than
-// the second uint32_t that is pointed at
-static int __attribute__((noinline))
-is_greater_than_uint32(const void *p1, const void *p2)
-{
-	numcmps++;
-	return (((struct item *)p1)->value > ((struct item *)p2)->value);
-} // is_greater_than_uint32
 
 // Used to compare two uint32_t values pointed at by the pointers given
 // Used to determine if the first uint32_t pointed at, is less than
@@ -102,18 +66,6 @@ is_less_than_uint32(const void *p1, const void *p2)
 	numcmps++;
 	return (((struct item *)p1)->value < ((struct item *)p2)->value);
 } // is_less_than_uint32
-
-
-// Used to compare two uint32_t values pointed at by the pointers given
-static int __attribute__((noinline))
-compare_uint32(const void *p1, const void *p2)
-{
-	const uint32_t av = ((struct item *)p1)->value;
-	const uint32_t bv = ((struct item *)p2)->value;
-
-	numcmps++;
-	return (av == bv) ? 0 : (av < bv) ? -1 : 1;
-} // compare_uint32
 
 
 void
@@ -169,12 +121,6 @@ test_stability(struct item a[], size_t n)
 #endif
 } // test_stability
 
-static inline uint64_t
-get_cycles()
-{
-	_mm_lfence();
-	return __rdtsc();
-}
 
 static void
 usage(char *prog, const char *msg)
@@ -197,16 +143,10 @@ usage(char *prog, const char *msg)
 	fprintf(stderr, "  -w <num>      Optional workspace size (in elements) to pass to the sorting algorithm\n");
 	fprintf(stderr, "                A value of 1 asks the sort to allocate its own workspace (if it supports doing so)\n");
 	fprintf(stderr, "\nAvailable Sort Types:\n");
-//	fprintf(stderr, "   bl   - Blit Sort In-Place                     (Stable)\n");
 	fprintf(stderr, "   fb   - Basic Forsort In-Place                 (Stable)\n");
 	fprintf(stderr, "   fi   - Adaptive Forsort In-Place              (Unstable)\n");
 	fprintf(stderr, "   fs   - Stable Forsort In-Place                (Stable)\n");
 	fprintf(stderr, "   is   - Insertion Sort                         (Stable)\n");
-	fprintf(stderr, "   gs   - Grail Sort In-Place                    (Stable)\n");
-	fprintf(stderr, "   gq   - GLibc Quick Sort In-Place              (Stability Not Guaranteed)\n");
-	fprintf(stderr, "   nq   - Bentley/McIlroy Quick Sort In-Place    (Unstable)\n");
-	fprintf(stderr, "   ti   - TimSort                                (Stable)\n");
-	fprintf(stderr, "   wi   - WikiSort                               (Stable)\n");
 	exit(-1);
 } // usage
 
@@ -214,47 +154,9 @@ usage(char *prog, const char *msg)
 void
 parse_sort_type(char *opt)
 {
-	if (strcmp(opt, "gs") == 0) {
-		sortname = "GrailSort";
-		sorttype =  GRAIL_SORT;
-		return;
-	}
-
-#if 1
-	if (strcmp(opt, "bl") == 0) {
-		sortname = "BlitSort";
-		sorttype =  BLIT_SORT;
-		return;
-	}
-#endif
-
 	if (strcmp(opt, "is") == 0) {
 		sortname = "Insertion Sort";
 		sorttype =  INSERT_SORT;
-		return;
-	}
-
-	if (strcmp(opt, "wi") == 0) {
-		sortname = "WikiSort";
-		sorttype =  WIKI_SORT;
-		return;
-	}
-
-	if (strcmp(opt, "ti") == 0) {
-		sortname = "TimSort";
-		sorttype =  TIM_SORT;
-		return;
-	}
-
-	if (strcmp(opt, "gq") == 0) {
-		sortname = "GLibc QuickSort";
-		sorttype =  GLIBC_QSORT;
-		return;
-	}
-
-	if (strcmp(opt, "nq") == 0) {
-		sortname = "Bentley/McIlroy QuickSort";
-		sorttype =  BENTLEY_QSORT;
 		return;
 	}
 
@@ -624,7 +526,6 @@ main(int argc, char *argv[])
 	}
 
 	double	total_time = 0;
-	size_t	total_c = 0;
 	size_t	num_runs = 0;
 
 	// Let's finally do this thing!
@@ -638,7 +539,6 @@ main(int argc, char *argv[])
 		}
 
 		struct timespec start, end;
-		uint64_t startc = 0, endc = 0;
 
 		if (num_runs == 0) {
 			if (quick_test) {
@@ -652,29 +552,10 @@ main(int argc, char *argv[])
 		}
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
-		startc = get_cycles();
 
 		switch (sorttype) {
-		case GLIBC_QSORT:
-			qsort(a, n, sizeof(*a), compare_uint32);
-			break;
-		case BENTLEY_QSORT:
-			nqsort(a, n, sizeof(*a), compare_uint32);
-			break;
-		case BLIT_SORT:
-			blitsort(a, n, sizeof(*a), is_greater_than_uint32);
-			break;
 		case INSERT_SORT:
 			insertion_sort(a, n, sizeof(*a), is_less_than_uint32);
-			break;
-		case WIKI_SORT:
-			WikiSort(a, n, wiki_compare);	// Wiki-Sort only accepts 64-bit items
-			break;
-		case TIM_SORT:
-			timsort(a, n, sizeof(*a), compare_uint32);
-			break;
-		case GRAIL_SORT:
-			grailSortInPlace(a, n, sizeof(*a), compare_uint32);
 			break;
 		case FORSORT_BASIC:
 			forsort_basic(a, n, sizeof(*a), is_less_than_uint32);
@@ -690,13 +571,11 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
-		endc = get_cycles();
 		clock_gettime(CLOCK_MONOTONIC, &end);
 
 		double tim = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000000.0;
 
 		total_time += tim;
-		total_c += (endc - startc);
 
 		num_runs++;
 		if (quick_test)
@@ -725,7 +604,6 @@ main(int argc, char *argv[])
 	printf("Total number of runs     : %lu\n", num_runs);
 	printf("Avg Time taken to sort   : %.9fs\n", total_time / num_runs);
 	printf("Avg Number of Compares   : %lu\n", numcmps/ num_runs);
-	printf("Avg Number of CPU Cycles : %lu\n", total_c / num_runs);
 	printf("Data Is Sorted           : %s\n", correct ? "TRUE" : "FALSE");
 #if USE32BIT
 	printf("Sort is Stable           : %s\n", "UNKNOWN");

@@ -5,17 +5,11 @@
 
 DEP=	forsort-rotate.h forsort-insert.h forsort-basic.h forsort-merge.h forsort-stable.h
 
-SRC=	forsort.c \
-	main.c \
-	nqsort.c \
-	timsort.c \
-	blitsort.c \
-	WikiSort.c \
-	timsort_r.c \
-	grail_sort.c 
+SRC=	main.c \
+	forsort.c
 
-INCDIR= include
-SRCDIR= src
+INCDIR= .
+SRCDIR= .
 OBJDIR= obj
 
 ######################################################################################
