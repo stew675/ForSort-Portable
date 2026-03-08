@@ -37,8 +37,9 @@ struct item {
 	// Uncomment following line to test 128-bit types
 //	uint64_t	stuff64;
 
-	// Uncomment following line to enable un-aligned testing
-//	uint8_t		stuff8;
+	// Uncomment following lines to enable un-aligned/large testing
+//	uint8_t		stuff1;
+//	uint8_t		stuff2048[2048];
 } __attribute__((packed));
 
 #include "forsort.h"
