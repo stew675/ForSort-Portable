@@ -115,18 +115,11 @@ Usage: ts [options] <sorttype< <num>
         -w <num>    Optional workspace size (in elements) to pass to the sorting algorithm
 
 Available Sort Types:
-   gq   - GLibc Quick Sort In-Place                  (Stable?[1]/Not-In-Place)
-   nq   - Bentley/McIlroy Quick Sort                 (Unstable/In-Place)
    fb   - Basic ForSort Merge Sort In-Place          (Stable/In-Place)
-   fi   - Adaptive ForSort Merge Sort In-Place       (Unstable[2]/In-Place)
+   fi   - Adaptive ForSort Merge Sort In-Place       (Unstable[1]/In-Place)
    fs   - Stable ForSort Merge Sort In-Place         (Stable/In-Place)
-   gs   - GrailSort                                  (Stable/In-Place)
-   ti   - TimSort                                    (Stable/Not-In-Place)
-   wi   - WikiSort                                   (Stable/In-Place)
 
-[1] - GlibC's sorting algorithm's stability is not guaranteed, and can fall back to an
-      unstable algorithm for certain inputs
-[2] - The Adaptive Forsort algorithm can be provided with an external work-space, which
+[1] - The Adaptive Forsort algorithm can be provided with an external work-space, which
       if done, will make the algorithm sort-stable
 ```
 
