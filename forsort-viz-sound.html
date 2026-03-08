@@ -573,13 +573,9 @@
                 na = pb - pa;
 
                 if (na < nb) {
-                    if (na <= MIN_STREAM) {
-                        rotateSmall(pa, pb, pe);
-                        clearRegion('rotation');
-                        return;
-                    }
                     let no = nb - na;
-                    if (no <= MIN_STREAM) {
+
+                    if ((na <= MIN_STREAM) || (no <= MIN_STREAM)) {
                         rotateSmall(pa, pb, pe);
                         clearRegion('rotation');
                         return;
@@ -602,13 +598,9 @@
                     clearRegion('rotation');
                     return;
                 } else {
-                    if (nb <= MIN_STREAM) {
-                        rotateSmall(pa, pb, pe);
-                        clearRegion('rotation');
-                        return;
-                    }
                     let no = na - nb;
-                    if (no <= MIN_STREAM) {
+
+                    if ((nb <= MIN_STREAM) || (no <= MIN_STREAM)) {
                         rotateSmall(pa, pb, pe);
                         clearRegion('rotation');
                         return;
@@ -641,10 +633,6 @@
                     tb--;
                 }
             }
-        }
-
-        function sortFive(p) {
-            insertionSort(p, 5);
         }
 
         // ===================================================================
@@ -1106,7 +1094,7 @@
             }
 
             for (let pt = pb, pe = pa + n; pt < pe; pt += MS) {
-                sortFive(pt);
+                insertionSort(pt, MS);
             }
 
             let disorder = 0, num = 0;
